@@ -103,6 +103,7 @@ ENV PUID=1000 \
     GAME_ID="" \
     DATA_PATH="${STEAMAPPDATADIR}" \
     MAX_PLAYERS=10 \
+    OVERRIDE_SERVER_CONFIG=false \
     SEASON="" \
     SERVER_IP="" \
     SERVER_PORT="" \

@@ -25,12 +25,88 @@ add_flag() {
     fi
 }
 
+json_string() {
+    local value="$1"
+
+    value="${value//\\/\\\\}"
+    value="${value//\"/\\\"}"
+    value="${value//$'\n'/\\n}"
+    value="${value//$'\r'/\\r}"
+    value="${value//$'\t'/\\t}"
+
+    printf '"%s"' "$value"
+}
+
+json_int_or_default() {
+    local name="$1"
+    local value="$2"
+    local default="$3"
+
+    if [ -z "$value" ]; then
+        printf '%s' "$default"
+        return
+    fi
+
+    if [[ "$value" =~ ^-?[0-9]+$ ]]; then
+        printf '%s' "$value"
+        return
+    fi
+
+    echo "Invalid integer value for ${name}: ${value}" >&2
+    exit 1
+}
+
+generate_server_config() {
+    local data_path="${DATA_PATH:-${STEAMAPPDATADIR:-}}"
+    local server_config="${data_path}/ServerConfig.generated.json"
+    local world
+    local hashed_world_seed
+    local max_players
+    local max_number_packets_sent_per_frame
+    local network_send_rate
+    local world_mode
+    local season_override
+
+    world="$(json_int_or_default "WORLD_INDEX" "${WORLD_INDEX:-}" 0)" || exit 1
+    hashed_world_seed="$(json_int_or_default "HASHED_WORLD_SEED" "${HASHED_WORLD_SEED:-}" 0)" || exit 1
+    max_players="$(json_int_or_default "MAX_PLAYERS" "${MAX_PLAYERS:-}" 10)" || exit 1
+    max_number_packets_sent_per_frame="$(json_int_or_default "MAX_NUMBER_PACKETS_SENT_PER_FRAME" "${MAX_NUMBER_PACKETS_SENT_PER_FRAME:-}" 1)" || exit 1
+    network_send_rate="$(json_int_or_default "NETWORK_SEND_RATE" "${NETWORK_SEND_RATE:-}" 20)" || exit 1
+    world_mode="$(json_int_or_default "WORLD_MODE" "${WORLD_MODE:-}" 0)" || exit 1
+    season_override="$(json_int_or_default "SEASON" "${SEASON:-}" -1)" || exit 1
+
+    mkdir -p "$(dirname "$server_config")"
+
+    cat > "$server_config" <<EOF
+{
+    "gameId": $(json_string "${GAME_ID:-}"),
+    "password": $(json_string "${PASSWORD:-}"),
+    "world": ${world},
+    "worldName": $(json_string "${WORLD_NAME:-}"),
+    "worldSeed": $(json_string "${WORLD_SEED:-}"),
+    "hashedWorldSeed": ${hashed_world_seed},
+    "maxNumberPlayers": ${max_players},
+    "maxNumberPacketsSentPerFrame": ${max_number_packets_sent_per_frame},
+    "networkSendRate": ${network_send_rate},
+    "worldMode": ${world_mode},
+    "seasonOverride": ${season_override}
+}
+EOF
+
+    params+=("-serverconfig" "$server_config")
+}
+
 # Makes log file avaliable for other uses.
 logfile="${STEAMAPPDIR}/logs/$(date '+%Y-%m-%d_%H-%M-%S').log"
 params=(
     "-batchmode"
     "-logfile" "$logfile"
 )
+
+override_server_config="${OVERRIDE_SERVER_CONFIG:-}"
+if [ "${override_server_config,,}" = "true" ]; then
+    generate_server_config
+fi
 
 add_param "-world"              "${WORLD_INDEX}"
 add_param "-worldname"          "${WORLD_NAME}"
