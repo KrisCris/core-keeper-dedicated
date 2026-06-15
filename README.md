@@ -197,6 +197,7 @@ Set `OVERRIDE_SERVER_CONFIG=true` to additionally generate `/home/steam/core-kee
 | OVERRIDE_SERVER_CONFIG | false | Enables generated `ServerConfig.generated.json` support when set to `true`. |
 | MAX_NUMBER_PACKETS_SENT_PER_FRAME | No Default | Only used when `OVERRIDE_SERVER_CONFIG=true`. Sets `maxNumberPacketsSentPerFrame` in the generated `ServerConfig`. If unset, the generated config uses the game default of `1`. |
 | NETWORK_SEND_RATE | No Default | Only used when `OVERRIDE_SERVER_CONFIG=true`. Sets `networkSendRate` in the generated `ServerConfig`. If unset, the generated config uses the game default of `20`. |
+| CUSTOM_LAUNCH_PARAMS | "" | Appends extra launch arguments after the built-in container arguments. Intended for mod-specific or advanced server flags. |
 
 The generated file is rebuilt from environment variables every startup, so edit the environment variables instead of editing `ServerConfig.generated.json` by hand. Existing environment variables such as `WORLD_NAME`, `MAX_PLAYERS`, `PASSWORD`, and `SERVER_PORT` are still emitted as command-line arguments, so they continue to work with `OVERRIDE_SERVER_CONFIG=true`.
 
@@ -224,6 +225,18 @@ OVERRIDE_SERVER_CONFIG=true
 MAX_NUMBER_PACKETS_SENT_PER_FRAME=4
 NETWORK_SEND_RATE=20
 ```
+
+### Custom launch parameters
+
+Use `CUSTOM_LAUNCH_PARAMS` for additional dedicated server launch arguments that are not covered by the container's normal environment variables.
+
+```env
+CUSTOM_LAUNCH_PARAMS=-keepserverrunning
+CUSTOM_LAUNCH_PARAMS=-keepserverrunning -someflag -someparam value
+CUSTOM_LAUNCH_PARAMS=-someparam "value with spaces"
+```
+
+Standalone flags and `-flag value` pairs can be mixed in the same value. Single-quoted and double-quoted values are preserved as one argument. These arguments are appended after the container's built-in arguments, so use them only for settings that do not already have a dedicated environment variable above.
 
 ### Contributors
 <a href="https://github.com/escapingnetwork/core-keeper-dedicated/graphs/contributors">

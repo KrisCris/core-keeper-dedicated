@@ -58,6 +58,7 @@ reset_env() {
     export OVERRIDE_SERVER_CONFIG=""
     export MAX_NUMBER_PACKETS_SENT_PER_FRAME=""
     export NETWORK_SEND_RATE=""
+    export CUSTOM_LAUNCH_PARAMS=""
 
     mkdir -p "$STEAMAPPDIR" "$STEAMAPPDATADIR"
 }
@@ -120,5 +121,16 @@ compile_parameters
 if contains_param "-serverconfig"; then
     fail "-serverconfig should not be emitted when OVERRIDE_SERVER_CONFIG=false"
 fi
+
+reset_env
+export CUSTOM_LAUNCH_PARAMS="-keepserverrunning -modflag simple-value -quoted \"value with spaces\" -single 'single value'"
+
+compile_parameters
+
+contains_param "-keepserverrunning" || fail "custom standalone flag was not appended"
+contains_param_pair "-modflag" "simple-value" || fail "custom flag/value pair was not appended"
+contains_param_pair "-quoted" "value with spaces" || fail "custom double-quoted value was not preserved"
+contains_param_pair "-single" "single value" || fail "custom single-quoted value was not preserved"
+contains_param_pair "-maxplayers" "10" || fail "existing parameters should still be emitted with custom launch params"
 
 echo "compile-parameters-server-config: ok"

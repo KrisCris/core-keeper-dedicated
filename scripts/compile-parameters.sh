@@ -25,6 +25,95 @@ add_flag() {
     fi
 }
 
+append_custom_launch_params() {
+    local input="${CUSTOM_LAUNCH_PARAMS:-}"
+    local current=""
+    local quote=""
+    local char
+    local escape=0
+    local token_started=0
+    local i
+    local -a custom_params=()
+
+    if [ -z "$input" ]; then
+        return
+    fi
+
+    for ((i = 0; i < ${#input}; i++)); do
+        char="${input:i:1}"
+
+        if [ "$escape" -eq 1 ]; then
+            current+="$char"
+            token_started=1
+            escape=0
+            continue
+        fi
+
+        if [ "$quote" = "\"" ]; then
+            if [ "$char" = "\\" ]; then
+                escape=1
+            elif [ "$char" = "\"" ]; then
+                quote=""
+            else
+                current+="$char"
+                token_started=1
+            fi
+            continue
+        fi
+
+        if [ "$quote" = "'" ]; then
+            if [ "$char" = "'" ]; then
+                quote=""
+            else
+                current+="$char"
+                token_started=1
+            fi
+            continue
+        fi
+
+        case "$char" in
+            [[:space:]])
+                if [ "$token_started" -eq 1 ]; then
+                    custom_params+=("$current")
+                    current=""
+                    token_started=0
+                fi
+                ;;
+            "'")
+                quote="'"
+                token_started=1
+                ;;
+            "\"")
+                quote="\""
+                token_started=1
+                ;;
+            "\\")
+                escape=1
+                token_started=1
+                ;;
+            *)
+                current+="$char"
+                token_started=1
+                ;;
+        esac
+    done
+
+    if [ "$escape" -eq 1 ]; then
+        current+="\\"
+    fi
+
+    if [ -n "$quote" ]; then
+        echo "Invalid CUSTOM_LAUNCH_PARAMS: unmatched quote" >&2
+        exit 1
+    fi
+
+    if [ "$token_started" -eq 1 ]; then
+        custom_params+=("$current")
+    fi
+
+    params+=("${custom_params[@]}")
+}
+
 json_string() {
     local value="$1"
 
@@ -124,5 +213,7 @@ add_param "-password"           "${PASSWORD}"
 add_param "-allowonlyplatform"  "${ALLOW_ONLY_PLATFORM}"
 
 add_flag "-activateallcontent"  "${ACTIVATE_ALL_CONTENT}"
+
+append_custom_launch_params
 
 echo "${params[@]}"
